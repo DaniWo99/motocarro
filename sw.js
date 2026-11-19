@@ -1,9 +1,9 @@
-const CACHE_NAME = 'mi-motocarro-v3';
+const CACHE_NAME = 'mi-motocarro-v4';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './css/styles.css',
+  './css/styles.css?v=4',
   './js/config.js',
   './js/loan-data.js',
   './js/utils.js',
@@ -11,7 +11,7 @@ const APP_SHELL = [
   './js/sync.js',
   './js/finance.js',
   './js/charts.js',
-  './js/app.js',
+  './js/app.js?v=4',
   './assets/icon-192.png',
   './assets/icon-512.png'
 ];
@@ -37,24 +37,20 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  // Nunca cachear llamadas a Supabase Auth o REST API
   if (url.pathname.includes('/rest/v1/') || url.pathname.includes('/auth/v1/')) {
     return;
   }
 
-  // Estrategia stale-while-revalidate para archivos estáticos de la PWA
+  // Network-First: siempre carga los cambios nuevos si hay internet; usa caché si está offline
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const networkFetch = fetch(req)
-        .then((res) => {
-          if (res && res.status === 200 && res.type === 'basic') {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || networkFetch;
-    })
+    fetch(req)
+      .then((res) => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req))
   );
 });
