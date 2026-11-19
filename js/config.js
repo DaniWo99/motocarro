@@ -12,6 +12,6 @@
  * ingresarlos directamente desde la pantalla de acceso de la app.
  */
 window.APP_CONFIG = {
-  SUPABASE_URL: "",
-  SUPABASE_ANON_KEY: ""
+  SUPABASE_URL: "https://ojfoeazwlrvjzeclfugl.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_RDJwWZtN39NKyA_p50uw_w_rYIUAjcF"
 };
