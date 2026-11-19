@@ -14,25 +14,18 @@ const COLORS = {
   empty: '#1f1f24'
 };
 
-function setupCanvas(canvas, heightPx = 200) {
+function setupCanvas(canvas, heightPx = 190) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  let innerWidth = 280;
-  if (canvas.parentElement) {
-    const cs = window.getComputedStyle(canvas.parentElement);
-    const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
-    innerWidth = Math.floor(canvas.parentElement.clientWidth - padX);
-  }
-  const width = Math.max(200, innerWidth);
+  const box = canvas.parentElement;
+  const rect = box ? box.getBoundingClientRect() : { width: 300, height: heightPx };
+  const width = Math.max(200, Math.floor(rect.width || 300));
+  const height = Math.max(150, Math.floor(rect.height || heightPx));
   canvas.width = Math.floor(width * dpr);
-  canvas.height = Math.floor(heightPx * dpr);
-  canvas.style.width = '100%';
-  canvas.style.maxWidth = '100%';
-  canvas.style.height = `${heightPx}px`;
-  canvas.style.display = 'block';
+  canvas.height = Math.floor(height * dpr);
   const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, width, heightPx);
-  return { ctx, width, height: heightPx };
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  return { ctx, width, height };
 }
 
 /**
