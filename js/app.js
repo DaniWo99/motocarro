@@ -503,9 +503,9 @@ function renderDashboardView() {
       <span class="kpi-sub">Pagado: ${formatCOP(loan.totalPaidToRappi)}</span>
     </div>
     <div class="kpi-card">
-      <span class="kpi-label">Deuda pendiente Rappi</span>
-      <span class="kpi-value text-red">${formatCOP(loan.pendingCapital)}</span>
-      <span class="kpi-sub">Capital amortizado: ${formatCOP(loan.amortizedCapital)}</span>
+      <span class="kpi-label">Deuda total pendiente Rappi</span>
+      <span class="kpi-value text-red">${formatCOP(loan.pendingTotalDebt)}</span>
+      <span class="kpi-sub">Capital: ${formatCOP(loan.pendingCapital)} · Int/seg: ${formatCOP(loan.pendingFinancialCost)}</span>
     </div>
     <div class="kpi-card">
       <span class="kpi-label">Próxima cuota</span>
@@ -793,19 +793,19 @@ function renderLoanView() {
 
   $('loan-kpis').innerHTML = `
     <div class="kpi-card">
-      <span class="kpi-label">Capital solicitado</span>
-      <span class="kpi-value">${formatCOP(loan.initialCapital)}</span>
-      <span class="kpi-sub">36 cuotas · Inicio ${formatDateHuman(state.settings.firstDueDate)}</span>
+      <span class="kpi-label">Total préstamo (36 cuotas)</span>
+      <span class="kpi-value">${formatCOP(loan.originalTotalLoan)}</span>
+      <span class="kpi-sub">Capital: ${formatCOP(loan.initialCapital)} · Int/seg/com: ${formatCOP(loan.originalFinancialCost)}</span>
     </div>
     <div class="kpi-card">
-      <span class="kpi-label">Saldo pendiente de capital</span>
-      <span class="kpi-value text-red">${formatCOP(loan.pendingCapital)}</span>
-      <span class="kpi-sub">Amortizado: ${formatCOP(loan.amortizedCapital)}</span>
+      <span class="kpi-label">Deuda total por pagar${sim.isSimulated ? ' (est.)' : ''}</span>
+      <span class="kpi-value text-red">${formatCOP(loan.pendingTotalDebt)}</span>
+      <span class="kpi-sub">Capital: ${formatCOP(loan.pendingCapital)} · Int/seg: ${formatCOP(loan.pendingFinancialCost)}</span>
     </div>
     <div class="kpi-card">
       <span class="kpi-label">Total pagado a Rappi</span>
       <span class="kpi-value">${formatCOP(loan.totalPaidToRappi)}</span>
-      <span class="kpi-sub">Abonos extra a capital: ${formatCOP(loan.totalExtraCapital)}</span>
+      <span class="kpi-sub">Capital amortizado: ${formatCOP(loan.amortizedCapital)}</span>
     </div>
     <div class="kpi-card">
       <span class="kpi-label">Finalización estimada</span>
@@ -1287,7 +1287,7 @@ function renderStatsView() {
     <div class="kpi-card"><span class="kpi-label">Promedio mensual registrado</span><span class="kpi-value">${formatCOP(ov.avgMonthlyIncome)}</span></div>
     <div class="kpi-card"><span class="kpi-label">Gastos acumulados</span><span class="kpi-value text-red">${formatCOP(ov.totalExpenses)}</span></div>
     <div class="kpi-card"><span class="kpi-label">Dinero destinado a Rappi</span><span class="kpi-value text-red">${formatCOP(ov.loan.totalPaidToRappi)}</span></div>
-    <div class="kpi-card"><span class="kpi-label">Deuda restante Rappi</span><span class="kpi-value text-red">${formatCOP(ov.loan.pendingCapital)}</span></div>
+    <div class="kpi-card"><span class="kpi-label">Deuda total restante Rappi</span><span class="kpi-value text-red">${formatCOP(ov.loan.pendingTotalDebt)}</span><span class="kpi-sub">Capital: ${formatCOP(ov.loan.pendingCapital)}</span></div>
     <div class="kpi-card"><span class="kpi-label">Resultado neto real</span><span class="kpi-value ${ov.netBusinessProfit >= 0 ? 'text-green' : 'text-red'}">${formatCOP(ov.netBusinessProfit)}</span></div>
   `;
 

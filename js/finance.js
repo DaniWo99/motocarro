@@ -126,9 +126,26 @@ export function computeLoanState(loanPayments = [], settings = DEFAULT_SETTINGS,
   // Simulación estimada cuando existen abonos extraordinarios a capital
   const simulation = simulateUpdatedSchedule(installments, pendingCapital, totalExtraCapital, firstDueDate);
 
+  const originalTotalLoan = Number(
+    RAPPI_ORIGINAL_SCHEDULE.reduce((s, r) => s + r.installment, 0).toFixed(2)
+  );
+  const originalFinancialCost = Number((originalTotalLoan - LOAN_INITIAL_CAPITAL).toFixed(2));
+  const pendingTotalOriginal = Number(
+    installments.reduce((s, i) => s + i.remainingAmount, 0).toFixed(2)
+  );
+  const pendingTotalDebt = simulation.hasExtraCapital
+    ? simulation.simulatedRemainingTotal
+    : pendingTotalOriginal;
+  const pendingFinancialCost = Math.max(0, Number((pendingTotalDebt - pendingCapital).toFixed(2)));
+
   return {
     initialCapital: LOAN_INITIAL_CAPITAL,
+    originalTotalLoan,
+    originalFinancialCost,
     pendingCapital,
+    pendingTotalOriginal,
+    pendingTotalDebt,
+    pendingFinancialCost,
     amortizedCapital: Number((amortizedCapitalFromInstallments + totalExtraCapital).toFixed(2)),
     totalExtraCapital: Number(totalExtraCapital.toFixed(2)),
     totalPaidToRappi: Number(totalPaidToRappi.toFixed(2)),
