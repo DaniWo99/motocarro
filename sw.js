@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-motocarro-v2';
+const CACHE_NAME = 'mi-motocarro-v3';
 const APP_SHELL = [
   './',
   './index.html',
