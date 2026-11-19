@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#09090b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Mi Motocarro" />
+  <title>Mi Motocarro — Gestión Financiera</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./assets/icon-192.png" />
+  <link rel="icon" type="image/png" href="./assets/icon-192.png" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+
+  <!-- ===================== PANTALLA DE ACCESO PRIVADO ===================== -->
+  <section id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-brand-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/>
+            <path d="M9 17h6M6 14l2-6h7l3 6"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Mi Motocarro</h1>
+          <p>Sistema privado de gestión financiera</p>
+        </div>
+      </div>
+
+      <div id="auth-alert" class="banner banner-red mb-12 hidden"></div>
+
+      <form id="auth-form">
+        <div class="form-group">
+          <label for="auth-email">Correo electrónico</label>
+          <input type="email" id="auth-email" required autocomplete="email" placeholder="tu@correo.com" />
+        </div>
+        <div class="form-group">
+          <label for="auth-password">Contraseña</label>
+          <input type="password" id="auth-password" required autocomplete="current-password" placeholder="••••••••" />
+        </div>
+        <button type="submit" id="btn-auth-submit" class="btn btn-primary btn-block">Iniciar sesión</button>
+      </form>
+
+      <div class="mt-12" style="display:flex; justify-content:space-between; gap:8px;">
+        <button type="button" id="btn-toggle-signup" class="btn btn-sm" style="flex:1;">Crear cuenta</button>
+        <button type="button" id="btn-toggle-cloud-cfg" class="btn btn-sm" style="flex:1;">Configurar Supabase</button>
+      </div>
+
+      <div id="cloud-config-box" class="hidden mt-12">
+        <div class="auth-divider"></div>
+        <p class="text-xs text-muted mb-12">
+          Ingresa la URL y la clave pública (anon key) de tu proyecto Supabase. Nunca uses la clave secreta (service_role).
+        </p>
+        <div class="form-group">
+          <label for="cfg-supabase-url">Project URL</label>
+          <input type="url" id="cfg-supabase-url" placeholder="https://tuproyecto.supabase.co" />
+        </div>
+        <div class="form-group">
+          <label for="cfg-supabase-key">Clave pública (anon key)</label>
+          <input type="text" id="cfg-supabase-key" placeholder="eyJhbGciOi..." />
+        </div>
+        <button type="button" id="btn-save-cloud-cfg" class="btn btn-block">Guardar conexión</button>
+      </div>
+
+      <div class="auth-divider"></div>
+      <button type="button" id="btn-local-mode" class="btn btn-block">
+        Continuar solo en este dispositivo (sin nube)
+      </button>
+      <p class="text-xs text-subtle mt-8">
+        Para sincronizar entre iPhone y PC, inicia sesión con tu cuenta de Supabase.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== APLICACIÓN PRINCIPAL ===================== -->
+  <div id="app-shell" class="app-shell hidden">
+
+    <!-- BARRA LATERAL (ESCRITORIO / TABLETA) -->
+    <aside class="sidebar" aria-label="Navegación principal">
+      <div class="sidebar-header">
+        <div class="sidebar-logo" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/>
+            <path d="M9 17h6M6 14l2-6h7l3 6"/>
+          </svg>
+        </div>
+        <span class="sidebar-title">Mi Motocarro</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-view="income">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Ingresos diarios</span>
+        </button>
+        <button class="nav-item" data-view="loan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          <span>Préstamo Rappi</span>
+        </button>
+        <button class="nav-item" data-view="expenses">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          <span>Gastos y utilidad</span>
+        </button>
+        <button class="nav-item" data-view="stats">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Estadísticas</span>
+        </button>
+        <button class="nav-item" data-view="history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Historial y datos</span>
+        </button>
+        <button class="nav-item" data-view="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Ajustes</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div id="sidebar-user-email" class="user-pill">Modo local</div>
+        <button id="btn-logout-sidebar" class="btn btn-sm btn-block">Cerrar sesión</button>
+      </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <div class="main-area">
+      <header class="topbar">
+        <div class="topbar-left">
+          <span id="topbar-title" class="topbar-title">Dashboard</span>
+        </div>
+        <div class="topbar-right">
+          <button id="sync-status-btn" class="sync-badge" title="Pulsar para sincronizar ahora">
+            <span class="sync-dot"></span>
+            <span id="sync-status-text">Sincronizado</span>
+          </button>
+          <button id="btn-mobile-settings" class="btn btn-sm" data-view="settings" aria-label="Ajustes">Ajustes</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <div id="local-mode-banner" class="banner banner-amber mb-12 hidden">
+          <span>Modo solo local activo (IndexedDB). Conecta tu cuenta de Supabase en Ajustes para sincronizar entre iPhone y PC.</span>
+        </div>
+
+        <!-- ==================== VISTA 1: DASHBOARD ==================== -->
+        <section id="view-dashboard" class="view">
+          <div id="dash-alert-box" class="mb-12"></div>
+
+          <div class="kpi-grid" id="dash-kpis"></div>
+
+          <div class="grid-2 mt-16">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">Ingresos diarios (mes actual)</h2>
+              </div>
+              <canvas id="chart-daily-income"></canvas>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">Ingresos mensuales (últimos 6 meses)</h2>
+              </div>
+              <canvas id="chart-monthly-income"></canvas>
+            </div>
+          </div>
+
+          <div class="grid-2 mt-16">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">Ingresos vs. Pagos a Rappi</h2>
+                <span class="text-xs text-muted">Verde: Ingresos · Rojo: Rappi</span>
+              </div>
+              <canvas id="chart-income-vs-loan"></canvas>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">Últimos movimientos</h2>
+                <button class="btn btn-sm" data-view="history">Ver todo</button>
+              </div>
+              <div id="dash-recent-list" class="movement-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VISTA 2: INGRESOS DIARIOS ==================== -->
+        <section id="view-income" class="view hidden">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Registrar ingreso de hoy</h2>
+                <p id="income-today-subtitle" class="text-xs text-muted mt-8"></p>
+              </div>
+              <span id="income-clock-badge" class="status-pill status-neutral font-mono"></span>
+            </div>
+
+            <div id="income-lock-banner" class="banner banner-amber mb-12 hidden"></div>
+            <div id="income-today-done-banner" class="banner banner-green mb-12 hidden"></div>
+
+            <div class="quick-income-grid" id="quick-income-buttons">
+              <button type="button" class="quick-amount-btn" data-amount="40000">
+                <span class="quick-amount-main">$40K</span>
+                <span class="quick-amount-sub">$40.000 COP</span>
+              </button>
+              <button type="button" class="quick-amount-btn" data-amount="45000">
+                <span class="quick-amount-main">$45K</span>
+                <span class="quick-amount-sub">$45.000 COP</span>
+              </button>
+              <button type="button" class="quick-amount-btn" data-amount="50000">
+                <span class="quick-amount-main">$50K</span>
+                <span class="quick-amount-sub">$50.000 COP</span>
+              </button>
+            </div>
+
+            <div class="quick-actions-row">
+              <button type="button" id="btn-custom-income-today" class="btn btn-sm">Otro valor para hoy</button>
+              <button type="button" id="btn-not-worked-today" class="btn btn-sm">Marcar hoy sin trabajar</button>
+              <button type="button" id="btn-register-past-income" class="btn btn-sm">Registrar o corregir otro día</button>
+            </div>
+          </div>
+
+          <div class="card mt-16">
+            <div class="cal-header">
+              <button type="button" id="btn-cal-prev" class="btn btn-sm">Anterior</button>
+              <h2 id="cal-month-title" class="card-title"></h2>
+              <button type="button" id="btn-cal-next" class="btn btn-sm">Siguiente</button>
+            </div>
+            <div class="cal-weekdays">
+              <div class="cal-weekday">Dom</div>
+              <div class="cal-weekday">Lun</div>
+              <div class="cal-weekday">Mar</div>
+              <div class="cal-weekday">Mié</div>
+              <div class="cal-weekday">Jue</div>
+              <div class="cal-weekday">Vie</div>
+              <div class="cal-weekday">Sáb</div>
+            </div>
+            <div id="income-calendar-grid" class="cal-grid"></div>
+            <div class="cal-legend">
+              <span class="legend-item"><span class="legend-swatch" style="background:#0f291a;border-color:#166534;"></span>Registrado</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#2a200c;border-color:#78350f;"></span>Pendiente de registro</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#111114;border-color:#1f1f24;"></span>Sin trabajar</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VISTA 3: PRÉSTAMO RAPPI ==================== -->
+        <section id="view-loan" class="view hidden">
+          <div class="kpi-grid" id="loan-kpis"></div>
+
+          <div class="card mt-16">
+            <div class="card-header">
+              <h2 class="card-title">Acciones del préstamo</h2>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" id="btn-pay-next-installment" class="btn btn-primary btn-sm">Registrar pago de cuota</button>
+                <button type="button" id="btn-extra-capital" class="btn btn-amber btn-sm">Abono extraordinario a capital</button>
+              </div>
+            </div>
+
+            <div id="loan-simulation-banner" class="banner banner-amber mb-12 hidden"></div>
+
+            <div class="tabs">
+              <button type="button" class="tab-btn active" data-loan-tab="original">Tabla oficial (36 cuotas)</button>
+              <button type="button" class="tab-btn" data-loan-tab="comparison">Comparativa: Original vs. Actualizado</button>
+              <button type="button" class="tab-btn" data-loan-tab="payments">Pagos y abonos registrados</button>
+            </div>
+
+            <div id="loan-tab-original" class="table-wrap"></div>
+            <div id="loan-tab-comparison" class="hidden"></div>
+            <div id="loan-tab-payments" class="hidden"></div>
+          </div>
+        </section>
+
+        <!-- ==================== VISTA 4: GASTOS Y UTILIDAD ==================== -->
+        <section id="view-expenses" class="view hidden">
+          <div class="kpi-grid" id="finance-summary-kpis"></div>
+
+          <div class="banner mt-12">
+            <span class="text-xs text-muted">
+              <strong>Flujo de caja (Dinero disponible)</strong> resta todos los pagos a Rappi (cuotas + abonos a capital).
+              <strong>Utilidad real del negocio</strong> resta únicamente gastos operativos e intereses/seguros/comisiones, porque el abono a capital reduce tu deuda y aumenta tu patrimonio.
+            </span>
+          </div>
+
+          <div class="grid-2 mt-16">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">Registrar gasto operativo</h2>
+              </div>
+              <form id="expense-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="exp-date">Fecha</label>
+                    <input type="date" id="exp-date" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="exp-category">Categoría</label>
+                    <select id="exp-category" required></select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="exp-amount">Importe (COP)</label>
+                  <input type="number" id="exp-amount" min="1" step="100" required placeholder="Ej. 35000" />
+                </div>
+                <div class="form-group">
+                  <label for="exp-desc">Descripción</label>
+                  <input type="text" id="exp-desc" placeholder="Ej. Cambio de aceite 20W50" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Guardar gasto</button>
+              </form>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">Gastos registrados</h2>
+              </div>
+              <div id="expenses-list" class="movement-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== VISTA 5: ESTADÍSTICAS Y PROYECCIONES ==================== -->
+        <section id="view-stats" class="view hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Estadísticas consolidadas</h2>
+            </div>
+            <div class="kpi-grid" id="stats-kpis"></div>
+          </div>
+
+          <div class="card mt-16">
+            <div class="card-header">
+              <h2 class="card-title">Proyecciones financieras (según horario configurado)</h2>
+            </div>
+            <p class="text-xs text-muted mb-12" id="proj-rules-note"></p>
+            <div class="kpi-grid" id="projections-kpis"></div>
+          </div>
+        </section>
+
+        <!-- ==================== VISTA 6: HISTORIAL Y DATOS ==================== -->
+        <section id="view-history" class="view hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Exportación y copias de seguridad</h2>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <button type="button" id="btn-export-csv" class="btn btn-sm">Exportar CSV</button>
+              <button type="button" id="btn-export-json" class="btn btn-sm">Respaldo JSON</button>
+              <label class="btn btn-sm" style="cursor:pointer;">
+                Restaurar desde JSON
+                <input type="file" id="input-restore-json" accept="application/json,.json" class="hidden" />
+              </label>
+            </div>
+          </div>
+
+          <div class="card mt-16">
+            <div class="card-header">
+              <h2 class="card-title">Historial completo de movimientos</h2>
+            </div>
+            <div class="form-row mb-12">
+              <div class="form-group">
+                <label for="hist-from">Desde</label>
+                <input type="date" id="hist-from" />
+              </div>
+              <div class="form-group">
+                <label for="hist-to">Hasta</label>
+                <input type="date" id="hist-to" />
+              </div>
+              <div class="form-group">
+                <label for="hist-type">Tipo</label>
+                <select id="hist-type">
+                  <option value="all">Todos</option>
+                  <option value="income">Ingresos</option>
+                  <option value="expense">Gastos</option>
+                  <option value="loan_payment">Pagos de cuotas</option>
+                  <option value="extra_capital">Abonos a capital</option>
+                  <option value="correction">Correcciones</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="hist-category">Categoría / búsqueda</label>
+                <input type="text" id="hist-category" placeholder="Ej. Aceite, Rappi..." />
+              </div>
+            </div>
+            <div id="history-list" class="movement-list"></div>
+          </div>
+        </section>
+
+        <!-- ==================== VISTA 7: AJUSTES ==================== -->
+        <section id="view-settings" class="view hidden">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">Reglas de operación del vehículo</h2>
+              </div>
+              <form id="settings-form">
+                <div class="form-group">
+                  <label>Días habituales de trabajo</label>
+                  <div id="settings-days-grid" class="days-toggle-grid"></div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="set-default-rate">Tarifa diaria habitual (COP)</label>
+                    <input type="number" id="set-default-rate" min="1000" step="1000" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="set-unlock-time">Hora habilitación registro (Colombia)</label>
+                    <input type="time" id="set-unlock-time" required />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label style="display:flex; align-items:center; gap:8px; color:var(--text);">
+                    <input type="checkbox" id="set-dec-all" />
+                    En diciembre trabaja todos los días
+                  </label>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="set-dec-rate">Tarifa habitual en diciembre (COP)</label>
+                    <input type="number" id="set-dec-rate" min="1000" step="1000" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="set-first-due">Primera fecha vencimiento Rappi</label>
+                    <input type="date" id="set-first-due" required />
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Guardar ajustes</button>
+              </form>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">Cuenta y sincronización en la nube</h2>
+              </div>
+              <p id="settings-sync-summary" class="text-sm text-muted mb-12"></p>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <button type="button" id="btn-force-sync" class="btn">Sincronizar ahora</button>
+                <button type="button" id="btn-settings-logout" class="btn btn-danger">Cerrar sesión / Cambiar modo</button>
+              </div>
+              <div class="auth-divider"></div>
+              <h3 class="card-title mb-12">Registro de conflictos detectados</h3>
+              <div id="conflicts-list" class="text-xs text-muted">Sin conflictos registrados.</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- NAVEGACIÓN INFERIOR (MÓVIL / IPHONE) -->
+    <nav class="bottom-nav" aria-label="Navegación móvil">
+      <div class="bottom-nav-inner">
+        <button class="bottom-nav-btn active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          <span>Inicio</span>
+        </button>
+        <button class="bottom-nav-btn" data-view="income">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Ingresos</span>
+        </button>
+        <button class="bottom-nav-btn" data-view="loan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          <span>Rappi</span>
+        </button>
+        <button class="bottom-nav-btn" data-view="expenses">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          <span>Gastos</span>
+        </button>
+        <button class="bottom-nav-btn" data-view="history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Historial</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ===================== MODAL GENÉRICO REUTILIZABLE ===================== -->
+  <div id="modal-backdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title" class="modal-title"></h3>
+        <button type="button" id="modal-close" class="modal-close" aria-label="Cerrar">×</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ===================== TOAST DE NOTIFICACIÓN ===================== -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="./js/config.js"></script>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
