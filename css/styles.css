@@ -41,6 +41,9 @@
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   background-color: var(--bg);
   color: var(--text);
   font-family: var(--font);
@@ -334,6 +337,15 @@ h1, h2, h3, h4, p {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
 }
 
 .card-header {
@@ -357,6 +369,7 @@ h1, h2, h3, h4, p {
 }
 
 .kpi-card {
+  min-width: 0;
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -374,6 +387,7 @@ h1, h2, h3, h4, p {
 
 .kpi-value {
   font-size: 22px;
+  overflow-wrap: anywhere;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -775,6 +789,7 @@ td.num, th.num {
 
 .movement-left {
   min-width: 0;
+  flex: 1;
 }
 
 .movement-title {
@@ -788,7 +803,7 @@ td.num, th.num {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 360px;
+  max-width: 100%;
 }
 
 .movement-right {
@@ -923,7 +938,7 @@ td.num, th.num {
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 500;
-  max-width: 360px;
+  max-width: 100%;
 }
 
 .toast.error {
