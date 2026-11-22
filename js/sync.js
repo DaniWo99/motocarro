@@ -214,45 +214,55 @@ export async function syncWithCloud() {
   let pulled = 0;
   let conflictsFound = 0;
 
-  // --- PASO 1: PUSH DE LA COLA OFFLINE ---
+  // --- PASO 1: PUSH DE LA COLA OFFLINE (RESILIENTE POR ELEMENTO) ---
   const queue = await getSyncQueue();
+  const pushErrors = [];
   for (const item of queue) {
-    if (item.table === 'user_settings') {
-      const settings = await getMeta('settings', DEFAULT_SETTINGS);
-      const res = await fetch(`${cfg.url}/rest/v1/user_settings?on_conflict=user_id`, {
+    try {
+      if (item.table === 'user_settings') {
+        const settings = await getMeta('settings', DEFAULT_SETTINGS);
+        const res = await fetch(`${cfg.url}/rest/v1/user_settings?on_conflict=user_id`, {
+          method: 'POST',
+          headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify({
+            user_id: userId,
+            settings,
+            updated_at: item.updated_at || new Date().toISOString()
+          })
+        });
+        if (!res.ok) {
+          const errTxt = await res.text().catch(() => '');
+          throw new Error(res.status === 403
+            ? 'Falta permiso SQL en user_settings (ejecuta GRANT en Supabase).'
+            : `Error al sincronizar ajustes (${res.status}): ${errTxt}`);
+        }
+        await removeQueueItem(item.queue_id);
+        pushed++;
+        continue;
+      }
+
+      const record = await getOne(item.table, item.record_id);
+      if (!record) {
+        await removeQueueItem(item.queue_id);
+        continue;
+      }
+
+      const payload = sanitizeRecordForCloud(item.table, record, userId);
+      const conflictTarget = item.table === 'incomes' ? 'user_id,date' : 'id';
+      const res = await fetch(`${cfg.url}/rest/v1/${item.table}?on_conflict=${conflictTarget}`, {
         method: 'POST',
         headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify({
-          user_id: userId,
-          settings,
-          updated_at: item.updated_at || new Date().toISOString()
-        })
+        body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error('Error al sincronizar los ajustes.');
+      if (!res.ok) {
+        const errTxt = await res.text().catch(() => '');
+        throw new Error(`No se pudo sincronizar ${item.table}: ${errTxt || res.status}`);
+      }
       await removeQueueItem(item.queue_id);
       pushed++;
-      continue;
+    } catch (itemErr) {
+      pushErrors.push(itemErr.message || String(itemErr));
     }
-
-    const record = await getOne(item.table, item.record_id);
-    if (!record) {
-      await removeQueueItem(item.queue_id);
-      continue;
-    }
-
-    const payload = sanitizeRecordForCloud(item.table, record, userId);
-    const conflictTarget = item.table === 'incomes' ? 'user_id,date' : 'id';
-    const res = await fetch(`${cfg.url}/rest/v1/${item.table}?on_conflict=${conflictTarget}`, {
-      method: 'POST',
-      headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-      const errTxt = await res.text().catch(() => '');
-      throw new Error(`No se pudo sincronizar ${item.table}: ${errTxt || res.status}`);
-    }
-    await removeQueueItem(item.queue_id);
-    pushed++;
   }
 
   // --- PASO 2: PULL DESDE LA NUBE Y MERGE CON DETECCIÓN DE CONFLICTOS ---
@@ -313,6 +323,10 @@ export async function syncWithCloud() {
         await setMeta('settings', { ...DEFAULT_SETTINGS, ...rows[0].settings });
       }
     }
+  }
+
+  if (pushErrors.length > 0) {
+    throw new Error(pushErrors[0]);
   }
 
   const syncedAt = new Date().toISOString();

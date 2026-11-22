@@ -333,7 +333,10 @@ export function computeFinancialOverview(incomes = [], expenses = [], loanPaymen
   // Series para gráficos
   const charts = buildChartSeries(activeIncomes, activeLoanPayments, now);
 
-  // Últimos movimientos unificados
+  // Periodos de cierre por pago de cuota (reinicia ingresos del periodo tras cada cuota)
+  const periods = computeBillingPeriods(activeIncomes, activeExpenses, activeLoanPayments);
+
+    // Últimos movimientos unificados
   const recentMovements = buildUnifiedHistory(activeIncomes, activeExpenses, activeLoanPayments).slice(0, 8);
 
   return {
@@ -352,6 +355,7 @@ export function computeFinancialOverview(incomes = [], expenses = [], loanPaymen
     availableCash,
     netBusinessProfit,
     loan,
+    periods,
     projections,
     charts,
     recentMovements
@@ -568,4 +572,109 @@ export function buildUnifiedHistory(incomes = [], expenses = [], loanPayments = 
   });
 
   return items;
+}
+
+/**
+ * Calcula los periodos cerrados por cada pago de cuota del préstamo Rappi
+ * y el periodo actual abierto (que se reinicia en $0 tras cada pago de cuota).
+ */
+export function computeBillingPeriods(activeIncomes = [], activeExpenses = [], activeLoanPayments = []) {
+  const installmentPays = activeLoanPayments
+    .filter((p) => p.payment_type === 'installment')
+    .sort((a, b) => {
+      const d = (a.payment_date || '').localeCompare(b.payment_date || '');
+      if (d !== 0) return d;
+      return (a.created_at || '').localeCompare(b.created_at || '');
+    });
+
+  const sortedIncomes = [...activeIncomes].sort((a, b) => {
+    const d = (a.date || '').localeCompare(b.date || '');
+    if (d !== 0) return d;
+    return (a.created_at || '').localeCompare(b.created_at || '');
+  });
+
+  const sortedExpenses = [...activeExpenses].sort((a, b) => {
+    const d = (a.date || '').localeCompare(b.date || '');
+    if (d !== 0) return d;
+    return (a.created_at || '').localeCompare(b.created_at || '');
+  });
+
+  // Un registro pertenece a un cierre si ocurrió antes de la fecha del pago,
+  // o en la misma fecha antes o igual a la hora de registro del pago.
+  const isAtOrBeforeBoundary = (recDate, recCreatedAt, boundDate, boundCreatedAt) => {
+    if (recDate < boundDate) return true;
+    if (recDate > boundDate) return false;
+    return (recCreatedAt || '') <= (boundCreatedAt || '9999');
+  };
+
+  let remainingIncomes = [...sortedIncomes];
+  let remainingExpenses = [...sortedExpenses];
+  const closedPeriods = [];
+
+  for (let idx = 0; idx < installmentPays.length; idx++) {
+    const pay = installmentPays[idx];
+    const boundDate = pay.payment_date;
+    const boundCreatedAt = pay.created_at || '9999';
+
+    const pIncomes = [];
+    const nextIncomes = [];
+    for (const inc of remainingIncomes) {
+      if (isAtOrBeforeBoundary(inc.date, inc.created_at, boundDate, boundCreatedAt)) {
+        pIncomes.push(inc);
+      } else {
+        nextIncomes.push(inc);
+      }
+    }
+    remainingIncomes = nextIncomes;
+
+    const pExpenses = [];
+    const nextExpenses = [];
+    for (const exp of remainingExpenses) {
+      if (isAtOrBeforeBoundary(exp.date, exp.created_at, boundDate, boundCreatedAt)) {
+        pExpenses.push(exp);
+      } else {
+        nextExpenses.push(exp);
+      }
+    }
+    remainingExpenses = nextExpenses;
+
+    const totalIncome = pIncomes.reduce((s, r) => s + Number(r.amount || 0), 0);
+    const totalExpenses = pExpenses.reduce((s, r) => s + Number(r.amount || 0), 0);
+    const quotaPaid = Number(pay.amount_paid || 0);
+    const netResult = Number((totalIncome - quotaPaid - totalExpenses).toFixed(2));
+    const startDate = pIncomes.length > 0
+      ? pIncomes[0].date
+      : (pExpenses.length > 0 ? pExpenses[0].date : boundDate);
+
+    closedPeriods.push({
+      periodNumber: idx + 1,
+      paymentId: pay.id,
+      installmentNumber: pay.installment_number,
+      startDate,
+      endDate: boundDate,
+      closedAt: pay.created_at,
+      workedDays: pIncomes.filter((r) => r.worked && Number(r.amount) > 0).length,
+      totalIncome: Number(totalIncome.toFixed(2)),
+      quotaPaid: Number(quotaPaid.toFixed(2)),
+      totalExpenses: Number(totalExpenses.toFixed(2)),
+      netResult
+    });
+  }
+
+  const currentIncome = remainingIncomes.reduce((s, r) => s + Number(r.amount || 0), 0);
+  const currentExpenses = remainingExpenses.reduce((s, r) => s + Number(r.amount || 0), 0);
+  const currentStartDate = remainingIncomes.length > 0
+    ? remainingIncomes[0].date
+    : (closedPeriods.length > 0 ? closedPeriods[closedPeriods.length - 1].endDate : null);
+
+  return {
+    closedPeriods: closedPeriods.reverse(), // Más reciente primero para la UI
+    currentPeriod: {
+      periodNumber: closedPeriods.length + 1,
+      startDate: currentStartDate,
+      workedDays: remainingIncomes.filter((r) => r.worked && Number(r.amount) > 0).length,
+      totalIncome: Number(currentIncome.toFixed(2)),
+      totalExpenses: Number(currentExpenses.toFixed(2))
+    }
+  };
 }

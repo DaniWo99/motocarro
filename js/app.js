@@ -369,6 +369,11 @@ function bindGlobalEvents() {
     openInstallmentPaymentModal(next ? next.number : 1);
   });
 
+  $('btn-close-period-pay').addEventListener('click', () => {
+    const next = state.overview?.loan?.nextInstallment;
+    openInstallmentPaymentModal(next ? next.number : 1);
+  });
+
   $('btn-extra-capital').addEventListener('click', () => {
     openExtraCapitalModal();
   });
@@ -488,9 +493,9 @@ function renderDashboardView() {
 
   $('dash-kpis').innerHTML = `
     <div class="kpi-card">
-      <span class="kpi-label">Ingresos del mes actual</span>
-      <span class="kpi-value text-green">${formatCOP(ov.currentMonthIncome)}</span>
-      <span class="kpi-sub">Proyección mes: ${formatCOP(ov.projections.projectedThisMonthIncome)}</span>
+      <span class="kpi-label">Ingresos del periodo actual</span>
+      <span class="kpi-value text-green">${formatCOP(ov.periods.currentPeriod.totalIncome)}</span>
+      <span class="kpi-sub">${ov.periods.currentPeriod.startDate ? `Periodo #${ov.periods.currentPeriod.periodNumber} · Desde ${formatDateHuman(ov.periods.currentPeriod.startDate)}` : `Periodo #${ov.periods.currentPeriod.periodNumber} · Sin registros aún`}</span>
     </div>
     <div class="kpi-card">
       <span class="kpi-label">Ingresos acumulados</span>
@@ -654,6 +659,51 @@ function renderIncomeView() {
       openIncomeModal(ds);
     });
   });
+
+  // Renderizar cierres de periodo debajo del calendario
+  renderIncomePeriods();
+}
+
+function renderIncomePeriods() {
+  const periods = state.overview?.periods;
+  if (!periods) return;
+  const cur = periods.currentPeriod;
+  const closed = periods.closedPeriods;
+
+  $('income-open-period-sub').textContent = cur.totalIncome > 0
+    ? `Periodo #${cur.periodNumber} abierto (desde ${formatDateHuman(cur.startDate)}): ${formatCOP(cur.totalIncome)} acumulados en ${cur.workedDays} día(s).`
+    : `Periodo #${cur.periodNumber} abierto: $0 acumulados hasta el momento.`;
+
+  const listEl = $('income-periods-list');
+  if (closed.length === 0) {
+    listEl.innerHTML = `<p class="text-sm text-muted">Aún no has cerrado ningún periodo. Al registrar el pago de tu primera cuota, aquí aparecerá el balance (ganancia o pérdida) del periodo y los ingresos del periodo actual volverán a $0.</p>`;
+    return;
+  }
+
+  listEl.innerHTML = closed
+    .map((p) => {
+      const isProfit = p.netResult >= 0;
+      const resultColor = isProfit ? 'text-green' : 'text-red';
+      const resultLabel = isProfit ? 'Ganancia' : 'Pérdida';
+      return `
+        <div class="movement-row">
+          <div class="movement-left">
+            <div class="movement-title">
+              Periodo #${p.periodNumber} (Cuota #${p.installmentNumber}) ·
+              <span class="text-xs text-muted">${formatDateHuman(p.startDate)} → ${formatDateHuman(p.endDate)}</span>
+            </div>
+            <div class="movement-sub">
+              Ingresos: ${formatCOP(p.totalIncome)} (${p.workedDays} días) · Cuota: -${formatCOP(p.quotaPaid)}${p.totalExpenses > 0 ? ` · Gastos: -${formatCOP(p.totalExpenses)}` : ''}
+            </div>
+          </div>
+          <div class="movement-right">
+            <div class="movement-amount ${resultColor}">${isProfit ? '+' : ''}${formatCOP(p.netResult)}</div>
+            <div class="text-xs ${resultColor}">${resultLabel}</div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
 }
 
 async function saveDailyIncome(dateStr, amount, worked, note = '', editReason = '') {
