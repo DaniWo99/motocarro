@@ -612,7 +612,7 @@ function renderIncomeView() {
     const isPast = ds < todayStr;
 
     let cls = 'off';
-    let label = scheduled ? '—' : 'Libre';
+    let label = '—';
     let amtClass = 'text-subtle';
 
     if (rec) {
