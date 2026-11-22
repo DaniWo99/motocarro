@@ -1,9 +1,9 @@
-const CACHE_NAME = 'mi-motocarro-v4';
+const CACHE_NAME = 'mi-motocarro-v5';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './css/styles.css?v=4',
+  './css/styles.css?v=5',
   './js/config.js',
   './js/loan-data.js',
   './js/utils.js',
@@ -11,7 +11,7 @@ const APP_SHELL = [
   './js/sync.js',
   './js/finance.js',
   './js/charts.js',
-  './js/app.js?v=4',
+  './js/app.js?v=5',
   './assets/icon-192.png',
   './assets/icon-512.png'
 ];
