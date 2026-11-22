@@ -16,6 +16,7 @@ import {
   formatDateHuman,
   formatDateTimeHuman,
   isScheduledWorkDay,
+  getExpectedDailyRate,
   generateId,
   escapeHtml,
   downloadTextFile,
@@ -517,6 +518,26 @@ function renderDashboardView() {
       <span class="kpi-value text-amber">${loan.nextInstallment ? formatCOP(loan.nextInstallment.remainingAmount) : '$0'}</span>
       <span class="kpi-sub">${loan.nextInstallment ? `Cuota #${loan.nextInstallment.number} · ${formatDateHuman(loan.nextInstallment.dueDate)}` : 'Sin cuotas pendientes'}</span>
     </div>
+    ${(() => {
+      const nextAmt = loan.nextInstallment ? loan.nextInstallment.remainingAmount : 0;
+      const periodInc = ov.periods.currentPeriod.totalIncome;
+      const dailyRate = Math.max(1, getExpectedDailyRate(ov.now.dateStr, state.settings));
+      const missing = Math.max(0, nextAmt - periodInc);
+      const exactDays = missing / dailyRate;
+      const ceilDays = Math.ceil(exactDays);
+      let sub = 'Préstamo completado';
+      if (nextAmt > 0 && missing <= 0) {
+        sub = `¡Cuota cubierta! Excedente: ${formatCOP(periodInc - nextAmt)}`;
+      } else if (nextAmt > 0) {
+        sub = `≈ ${ceilDays} día${ceilDays === 1 ? '' : 's'} (${exactDays.toFixed(1).replace('.', ',')} a ${formatShortK(dailyRate)}/día)`;
+      }
+      return `
+    <div class="kpi-card">
+      <span class="kpi-label">Falta para la próxima cuota</span>
+      <span class="kpi-value ${missing <= 0 ? 'text-green' : 'text-amber'}">${formatCOP(missing)}</span>
+      <span class="kpi-sub">${sub}</span>
+    </div>`;
+    })()}
     <div class="kpi-card">
       <span class="kpi-label">Dinero disponible (Flujo de caja)</span>
       <span class="kpi-value ${ov.availableCash >= 0 ? 'text-green' : 'text-red'}">${formatCOP(ov.availableCash)}</span>
@@ -772,7 +793,7 @@ function openIncomeModal(dateStr) {
         </div>
         <div class="form-group">
           <label for="mi-amount">Valor recibido (COP)</label>
-          <input type="number" id="mi-amount" min="0" step="1000" value="${existing ? existing.amount : state.settings.defaultDailyRate}" required />
+          <input type="number" id="mi-amount" min="0" step="1" value="${existing ? existing.amount : state.settings.defaultDailyRate}" required />
         </div>
         <div class="form-group">
           <label for="mi-note">Nota (opcional)</label>
@@ -1206,7 +1227,7 @@ function openExtraCapitalModal() {
         </div>
         <div class="form-group">
           <label for="ec-amount">Valor abonado a capital (COP)</label>
-          <input type="number" id="ec-amount" min="1000" step="1000" required placeholder="Ej. 500000" />
+          <input type="number" id="ec-amount" min="1" step="1" required placeholder="Ej. 500000" />
         </div>
         <div class="form-group">
           <label for="ec-note">Observación (opcional)</label>
