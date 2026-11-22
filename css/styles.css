@@ -62,7 +62,7 @@ h1, h2, h3, h4, p {
   margin: 0;
 }
 
-.text-green { color: var(--green); }
+.text-green { color: #22c55e; }
 .text-red { color: var(--red); }
 .text-amber { color: var(--amber); }
 .text-muted { color: var(--text-muted); }
@@ -557,7 +557,7 @@ h1, h2, h3, h4, p {
 .quick-amount-main {
   font-size: 26px;
   font-weight: 800;
-  color: var(--green);
+  color: #22c55e;
   font-variant-numeric: tabular-nums;
 }
 
