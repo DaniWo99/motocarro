@@ -14,9 +14,9 @@
   --text-muted: #a1a1aa;
   --text-subtle: #71717a;
 
-  --green: #22c55e;
-  --green-bg: #0f291a;
-  --green-border: #166534;
+  --green: #8B5CF6;
+  --green-bg: #211638;
+  --green-border: #6D28D9;
 
   --red: #ef4444;
   --red-bg: #2a1215;
@@ -485,12 +485,12 @@ h1, h2, h3, h4, p {
 .btn-primary {
   background-color: var(--green);
   border-color: var(--green);
-  color: #052e16;
+  color: #ffffff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #16a34a;
-  border-color: #16a34a;
+  background-color: #7C3AED;
+  border-color: #7C3AED;
 }
 
 .btn-danger {
