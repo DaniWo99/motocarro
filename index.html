@@ -11,7 +11,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./favicon.png" />
   <link rel="icon" type="image/png" href="./favicon.png" />
-  <link rel="stylesheet" href="./css/styles.css?v=6" />
+  <link rel="stylesheet" href="./css/styles.css?v=7" />
 </head>
 <body>
 
@@ -318,7 +318,14 @@
                 </div>
                 <div class="form-group">
                   <label for="exp-desc">Descripción</label>
-                  <input type="text" id="exp-desc" placeholder="Ej. Cambio de aceite 20W50" />
+                  <input type="text" id="exp-desc" placeholder="Ej. Cambio de aceite y transmisión" />
+                </div>
+                <div class="form-group">
+                  <label style="display:flex; align-items:flex-start; gap:8px; color:var(--text); cursor:pointer;">
+                    <input type="checkbox" id="exp-deduct" checked style="margin-top:3px;" />
+                    <span>Descontar del dinero disponible y del periodo actual</span>
+                  </label>
+                  <p class="text-xs text-subtle">Desmárcala si lo pagaste con inversión inicial o dinero aparte (se guarda en el calendario e historial, pero no resta de lo generado).</p>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">Guardar gasto</button>
               </form>
@@ -329,6 +336,29 @@
                 <h2 class="card-title">Gastos registrados</h2>
               </div>
               <div id="expenses-list" class="movement-list"></div>
+            </div>
+          </div>
+
+          <div class="card mt-16" id="expenses-calendar-card">
+            <div class="cal-header">
+              <button type="button" id="btn-exp-cal-prev" class="btn btn-sm">Anterior</button>
+              <h2 id="exp-cal-month-title" class="card-title">Calendario de mantenimientos y gastos</h2>
+              <button type="button" id="btn-exp-cal-next" class="btn btn-sm">Siguiente</button>
+            </div>
+            <div class="cal-weekdays">
+              <div class="cal-weekday">Dom</div>
+              <div class="cal-weekday">Lun</div>
+              <div class="cal-weekday">Mar</div>
+              <div class="cal-weekday">Mié</div>
+              <div class="cal-weekday">Jue</div>
+              <div class="cal-weekday">Vie</div>
+              <div class="cal-weekday">Sáb</div>
+            </div>
+            <div id="expenses-calendar-grid" class="cal-grid"></div>
+            <div class="cal-legend">
+              <span class="legend-item"><span class="legend-swatch" style="background:#2a200c;border-color:#78350f;"></span>Mantenimiento / Aceite / Transmisión</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#2a1215;border-color:#7f1d1d;"></span>Reparaciones / Repuestos / Llantas</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#1c1c21;border-color:#3f3f46;"></span>Otros gastos</span>
             </div>
           </div>
         </section>
@@ -502,6 +532,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
   <script src="./js/config.js"></script>
-  <script type="module" src="./js/app.js?v=6"></script>
+  <script type="module" src="./js/app.js?v=7"></script>
 </body>
 </html>
