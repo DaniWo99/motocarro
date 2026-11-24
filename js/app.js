@@ -549,14 +549,14 @@ function renderDashboardView() {
     </div>
     ${(() => {
       const nextAmt = loan.nextInstallment ? loan.nextInstallment.remainingAmount : 0;
-      const periodInc = ov.periods.currentPeriod.totalIncome;
+      const periodNet = Math.max(0, ov.periods.currentPeriod.totalIncome - ov.periods.currentPeriod.totalExpenses);
       const dailyRate = Math.max(1, getExpectedDailyRate(ov.now.dateStr, state.settings));
-      const missing = Math.max(0, nextAmt - periodInc);
+      const missing = Math.max(0, nextAmt - periodNet);
       const exactDays = missing / dailyRate;
       const ceilDays = Math.ceil(exactDays);
       let sub = 'Préstamo completado';
       if (nextAmt > 0 && missing <= 0) {
-        sub = `¡Cuota cubierta! Excedente: ${formatCOP(periodInc - nextAmt)}`;
+        sub = `¡Cuota cubierta! Disponible: ${formatCOP(periodNet - nextAmt)} extra`;
       } else if (nextAmt > 0) {
         sub = `≈ ${ceilDays} día${ceilDays === 1 ? '' : 's'} (${exactDays.toFixed(1).replace('.', ',')} a ${formatShortK(dailyRate)}/día)`;
       }
