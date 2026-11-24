@@ -17,7 +17,9 @@ import {
   getBogotaNow,
   formatDateStr,
   isScheduledWorkDay,
-  getExpectedDailyRate
+  getExpectedDailyRate,
+  isExpenseDeducted,
+  cleanExpenseDescription
 } from './utils.js';
 
 /**
@@ -308,16 +310,36 @@ export function computeFinancialOverview(incomes = [], expenses = [], loanPaymen
   const activeMonthsCount = monthlyMap.size;
   const avgMonthlyIncome = activeMonthsCount > 0 ? totalGrossIncome / activeMonthsCount : 0;
 
-  // Gastos operativos
-  const totalExpenses = activeExpenses.reduce((s, r) => s + Number(r.amount || 0), 0);
-  const currentMonthExpenses = activeExpenses
+  // Gastos operativos (separando los que descuentan del periodo vs. inversión inicial/sin descuento)
+  const deductedExpenses = activeExpenses.filter((e) => isExpenseDeducted(e));
+  const nonDeductedExpenses = activeExpenses.filter((e) => !isExpenseDeducted(e));
+
+  const totalExpenses = deductedExpenses.reduce((s, r) => s + Number(r.amount || 0), 0);
+  const nonDeductedExpensesTotal = nonDeductedExpenses.reduce((s, r) => s + Number(r.amount || 0), 0);
+  const currentMonthExpenses = deductedExpenses
     .filter((r) => r.date.startsWith(currentMonthPrefix))
     .reduce((s, r) => s + Number(r.amount || 0), 0);
 
   const expensesByCategory = {};
-  for (const e of activeExpenses) {
+  for (const e of deductedExpenses) {
     expensesByCategory[e.category] = (expensesByCategory[e.category] || 0) + Number(e.amount || 0);
   }
+
+  // Último mantenimiento (Aceite, Transmisión o Mantenimiento, incluso si fue con inversión inicial)
+  const maintRegex = /aceite|transmisi|mantenimiento/i;
+  const maintenanceRecords = activeExpenses
+    .filter((e) =>
+      e.category === 'Aceite' ||
+      e.category === 'Transmisión' ||
+      e.category === 'Mantenimiento' ||
+      maintRegex.test(cleanExpenseDescription(e.description))
+    )
+    .sort((a, b) => {
+      const d = (b.date || '').localeCompare(a.date || '');
+      if (d !== 0) return d;
+      return (b.created_at || '').localeCompare(a.created_at || '');
+    });
+  const lastMaintenance = maintenanceRecords[0] || null;
 
   // Flujo de caja vs. Utilidad real del negocio
   // Flujo de caja (Dinero disponible) = Ingresos - Gastos operativos - Todos los pagos a Rappi (cuotas + abonos)
@@ -334,7 +356,7 @@ export function computeFinancialOverview(incomes = [], expenses = [], loanPaymen
   const charts = buildChartSeries(activeIncomes, activeLoanPayments, now);
 
   // Periodos de cierre por pago de cuota (reinicia ingresos del periodo tras cada cuota)
-  const periods = computeBillingPeriods(activeIncomes, activeExpenses, activeLoanPayments);
+  const periods = computeBillingPeriods(activeIncomes, deductedExpenses, activeLoanPayments);
 
     // Últimos movimientos unificados
   const recentMovements = buildUnifiedHistory(activeIncomes, activeExpenses, activeLoanPayments).slice(0, 8);
@@ -350,6 +372,8 @@ export function computeFinancialOverview(incomes = [], expenses = [], loanPaymen
     avgDailyIncome,
     avgMonthlyIncome,
     totalExpenses,
+    nonDeductedExpensesTotal,
+    lastMaintenance,
     currentMonthExpenses,
     expensesByCategory,
     availableCash,
@@ -529,12 +553,12 @@ export function buildUnifiedHistory(incomes = [], expenses = [], loanPayments = 
     items.push({
       id: e.id,
       type: 'expense',
-      typeLabel: 'Gasto',
+      typeLabel: isExpenseDeducted(e) ? 'Gasto' : 'Gasto (sin descuento)',
       date: e.date,
       category: e.category,
       amount: Number(e.amount || 0),
-      sign: '-',
-      description: e.description || e.category,
+      sign: isExpenseDeducted(e) ? '-' : '~',
+      description: cleanExpenseDescription(e.description) || e.category,
       created_at: e.created_at,
       updated_at: e.updated_at,
       raw: e

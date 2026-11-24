@@ -28,14 +28,37 @@ export const DEFAULT_SETTINGS = {
 
 export const EXPENSE_CATEGORIES = [
   'Mantenimiento',
+  'Aceite',
+  'Transmisión',
   'Reparaciones',
   'Llantas',
-  'Aceite',
   'Repuestos',
   'SOAT',
   'Impuestos',
   'Otros gastos'
 ];
+
+export const NO_DEDUCT_TAG = '[NO_DESCUENTA]';
+
+export function isExpenseDeducted(exp) {
+  if (!exp) return true;
+  if (exp.deduct_from_income === false) return false;
+  return !String(exp.description || '').startsWith(NO_DEDUCT_TAG);
+}
+
+export function cleanExpenseDescription(desc) {
+  const s = String(desc || '');
+  if (s.startsWith(NO_DEDUCT_TAG)) {
+    return s.slice(NO_DEDUCT_TAG.length).trim();
+  }
+  return s.trim();
+}
+
+export function encodeExpenseDescription(desc, deductFromIncome = true) {
+  const clean = cleanExpenseDescription(desc);
+  if (deductFromIncome) return clean;
+  return clean ? `${NO_DEDUCT_TAG} ${clean}` : NO_DEDUCT_TAG;
+}
 
 export const DAY_NAMES_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 export const DAY_NAMES_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];

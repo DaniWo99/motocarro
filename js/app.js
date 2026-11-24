@@ -17,6 +17,9 @@ import {
   formatDateTimeHuman,
   isScheduledWorkDay,
   getExpectedDailyRate,
+  isExpenseDeducted,
+  cleanExpenseDescription,
+  encodeExpenseDescription,
   generateId,
   escapeHtml,
   downloadTextFile,
@@ -71,6 +74,8 @@ const state = {
   overview: null,
   calYear: getBogotaNow().year,
   calMonth: getBogotaNow().month,
+  expCalYear: getBogotaNow().year,
+  expCalMonth: getBogotaNow().month,
   isSignupMode: false,
   syncStatus: 'idle',
   syncing: false
@@ -357,6 +362,24 @@ function bindGlobalEvents() {
     renderIncomeView();
   });
 
+  $('btn-exp-cal-prev').addEventListener('click', () => {
+    state.expCalMonth--;
+    if (state.expCalMonth < 1) {
+      state.expCalMonth = 12;
+      state.expCalYear--;
+    }
+    renderExpensesView();
+  });
+
+  $('btn-exp-cal-next').addEventListener('click', () => {
+    state.expCalMonth++;
+    if (state.expCalMonth > 12) {
+      state.expCalMonth = 1;
+      state.expCalYear++;
+    }
+    renderExpensesView();
+  });
+
   // Préstamo Rappi: Tabs y botones
   document.querySelectorAll('[data-loan-tab]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -385,7 +408,8 @@ function bindGlobalEvents() {
     const date = $('exp-date').value;
     const category = $('exp-category').value;
     const amount = Number($('exp-amount').value);
-    const description = $('exp-desc').value.trim();
+    const rawDesc = $('exp-desc').value.trim();
+    const deductFromIncome = $('exp-deduct').checked;
     if (!date || !amount || amount <= 0) {
       showToast('Ingresa una fecha y un valor válido.', true);
       return;
@@ -396,7 +420,7 @@ function bindGlobalEvents() {
       date,
       category,
       amount,
-      description,
+      description: encodeExpenseDescription(rawDesc, deductFromIncome),
       deleted: false,
       created_at: nowIso,
       updated_at: nowIso
@@ -405,7 +429,12 @@ function bindGlobalEvents() {
     await enqueueSync('expenses', record);
     $('exp-amount').value = '';
     $('exp-desc').value = '';
-    await refreshAfterMutation('Gasto registrado correctamente.');
+    $('exp-deduct').checked = true;
+    await refreshAfterMutation(
+      deductFromIncome
+        ? 'Gasto operativo registrado y descontado.'
+        : 'Gasto registrado sin descontar de tus ingresos.'
+    );
   });
 
   // Filtros de historial
@@ -1276,23 +1305,39 @@ function openExtraCapitalModal() {
 function renderExpensesView() {
   const ov = state.overview;
   const loan = ov.loan;
+  const lm = ov.lastMaintenance;
+
+  let lmValue = 'Sin registros';
+  let lmSub = 'Registra aceite, transmisión o mantenimiento';
+  if (lm) {
+    const todayDate = new Date(ov.now.year, ov.now.month - 1, ov.now.day);
+    const [ly, lmth, ld] = lm.date.split('-').map(Number);
+    const lmDate = new Date(ly, lmth - 1, ld);
+    const diffDays = Math.max(0, Math.round((todayDate - lmDate) / 86400000));
+    const agoTxt = diffDays === 0 ? 'Hoy' : diffDays === 1 ? 'Hace 1 día' : `Hace ${diffDays} días`;
+    lmValue = formatDateHuman(lm.date);
+    const cleanDesc = cleanExpenseDescription(lm.description);
+    lmSub = `${agoTxt} · ${escapeHtml(lm.category)}${cleanDesc ? ` (${escapeHtml(cleanDesc)})` : ''}`;
+  }
 
   $('finance-summary-kpis').innerHTML = `
+    <div class="kpi-card">
+      <span class="kpi-label">Último mantenimiento (Aceite / Transm.)</span>
+      <span class="kpi-value ${lm ? 'text-amber' : 'text-muted'}">${lmValue}</span>
+      <span class="kpi-sub">${lmSub}</span>
+    </div>
     <div class="kpi-card">
       <span class="kpi-label">Ingresos brutos</span>
       <span class="kpi-value text-green">${formatCOP(ov.totalGrossIncome)}</span>
     </div>
     <div class="kpi-card">
-      <span class="kpi-label">Gastos operativos</span>
+      <span class="kpi-label">Gastos descontados</span>
       <span class="kpi-value text-red">${formatCOP(ov.totalExpenses)}</span>
+      <span class="kpi-sub">${ov.nonDeductedExpensesTotal > 0 ? `Sin descuento: ${formatCOP(ov.nonDeductedExpensesTotal)}` : 'Todos descontados del flujo'}</span>
     </div>
     <div class="kpi-card">
       <span class="kpi-label">Pagos de cuotas Rappi</span>
       <span class="kpi-value text-red">${formatCOP(loan.totalContractualPayments)}</span>
-    </div>
-    <div class="kpi-card">
-      <span class="kpi-label">Abonos extraordinarios</span>
-      <span class="kpi-value text-amber">${formatCOP(loan.totalExtraCapital)}</span>
     </div>
     <div class="kpi-card">
       <span class="kpi-label">Dinero disponible (Flujo de caja)</span>
@@ -1313,20 +1358,25 @@ function renderExpensesView() {
     listEl.innerHTML = `<p class="text-sm text-muted">No has registrado gastos operativos todavía.</p>`;
   } else {
     listEl.innerHTML = activeExpenses
-      .map(
-        (e) => `
+      .map((e) => {
+        const deducted = isExpenseDeducted(e);
+        const desc = cleanExpenseDescription(e.description) || 'Sin descripción';
+        return `
           <div class="movement-row">
             <div class="movement-left">
-              <div class="movement-title">${escapeHtml(e.category)} · <span class="text-xs text-muted">${formatDateHuman(e.date)}</span></div>
-              <div class="movement-sub">${escapeHtml(e.description || 'Sin descripción')}</div>
+              <div class="movement-title">
+                ${escapeHtml(e.category)} · <span class="text-xs text-muted">${formatDateHuman(e.date)}</span>
+                ${!deducted ? `<span class="status-pill status-neutral" style="margin-left:6px;">Sin descuento</span>` : ''}
+              </div>
+              <div class="movement-sub">${escapeHtml(desc)}</div>
             </div>
             <div class="movement-right" style="display:flex; align-items:center; gap:10px;">
-              <div class="movement-amount text-red">-${formatCOP(e.amount)}</div>
+              <div class="movement-amount ${deducted ? 'text-red' : 'text-muted'}">${deducted ? '-' : ''}${formatCOP(e.amount)}</div>
               <button type="button" class="btn btn-sm btn-danger" data-del-exp="${e.id}">Eliminar</button>
             </div>
           </div>
-        `
-      )
+        `;
+      })
       .join('');
 
     listEl.querySelectorAll('[data-del-exp]').forEach((btn) => {
@@ -1340,6 +1390,114 @@ function renderExpensesView() {
           await refreshAfterMutation('Gasto eliminado.');
         });
       });
+    });
+  }
+
+  renderExpensesCalendar(activeExpenses, ov.now.dateStr);
+}
+
+function renderExpensesCalendar(activeExpenses, todayStr) {
+  $('exp-cal-month-title').textContent = `${MONTH_NAMES[state.expCalMonth - 1]} ${state.expCalYear}`;
+  const byDate = new Map();
+  for (const e of activeExpenses) {
+    if (!byDate.has(e.date)) byDate.set(e.date, []);
+    byDate.get(e.date).push(e);
+  }
+
+  const firstDow = new Date(state.expCalYear, state.expCalMonth - 1, 1).getDay();
+  const daysInMonth = new Date(state.expCalYear, state.expCalMonth, 0).getDate();
+  const maintCats = new Set(['Mantenimiento', 'Aceite', 'Transmisión', 'SOAT', 'Impuestos']);
+  const repairCats = new Set(['Reparaciones', 'Repuestos', 'Llantas']);
+
+  let html = '';
+  for (let i = 0; i < firstDow; i++) {
+    html += `<div class="cal-cell empty"></div>`;
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = formatDateStr(state.expCalYear, state.expCalMonth, d);
+    const items = byDate.get(ds) || [];
+    const isToday = ds === todayStr;
+
+    let cls = 'off';
+    let label = '—';
+    let amtClass = 'text-subtle';
+
+    if (items.length > 0) {
+      const totalDay = items.reduce((s, x) => s + Number(x.amount || 0), 0);
+      const hasRepair = items.some((x) => repairCats.has(x.category));
+      const hasMaint = items.some((x) => maintCats.has(x.category));
+      if (hasMaint) {
+        cls = 'exp-maint';
+        amtClass = 'text-amber';
+      } else if (hasRepair) {
+        cls = 'exp-repair';
+        amtClass = 'text-red';
+      } else {
+        cls = 'exp-other';
+        amtClass = 'text-muted';
+      }
+      label = formatShortK(totalDay);
+    }
+
+    html += `
+      <button type="button" class="cal-cell ${cls} ${isToday ? 'today' : ''}" data-exp-cal-date="${ds}">
+        <span class="cal-day-num">${d}</span>
+        <span class="cal-day-amt ${amtClass}">${label}</span>
+      </button>
+    `;
+  }
+
+  const grid = $('expenses-calendar-grid');
+  grid.innerHTML = html;
+  grid.querySelectorAll('[data-exp-cal-date]').forEach((cell) => {
+    cell.addEventListener('click', () => {
+      const ds = cell.dataset.expCalDate;
+      openExpenseDayModal(ds, byDate.get(ds) || []);
+    });
+  });
+}
+
+function openExpenseDayModal(dateStr, items) {
+  const bodyHtml = items.length === 0
+    ? `<p class="text-sm text-muted">No hay mantenimientos ni gastos registrados el ${formatDateHuman(dateStr)}.</p>
+       <div class="modal-actions">
+         <button type="button" id="btn-prefill-exp-date" class="btn btn-primary">Registrar gasto en esta fecha</button>
+       </div>`
+    : `<div class="movement-list">
+         ${items
+           .map((e) => {
+             const deducted = isExpenseDeducted(e);
+             const desc = cleanExpenseDescription(e.description) || 'Sin descripción';
+             return `
+               <div class="movement-row">
+                 <div class="movement-left">
+                   <div class="movement-title">
+                     ${escapeHtml(e.category)}
+                     ${!deducted ? `<span class="status-pill status-neutral" style="margin-left:6px;">Sin descuento</span>` : ''}
+                   </div>
+                   <div class="movement-sub">${escapeHtml(desc)}</div>
+                 </div>
+                 <div class="movement-right">
+                   <div class="movement-amount ${deducted ? 'text-red' : 'text-muted'}">${formatCOP(e.amount)}</div>
+                 </div>
+               </div>
+             `;
+           })
+           .join('')}
+       </div>
+       <div class="modal-actions">
+         <button type="button" id="btn-prefill-exp-date" class="btn">Agregar otro en esta fecha</button>
+       </div>`;
+
+  openModal(`Detalle de gastos — ${formatDateHuman(dateStr)}`, bodyHtml);
+
+  const prefillBtn = $('btn-prefill-exp-date');
+  if (prefillBtn) {
+    prefillBtn.addEventListener('click', () => {
+      $('exp-date').value = dateStr;
+      closeModal();
+      $('exp-amount').focus();
     });
   }
 }
