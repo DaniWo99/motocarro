@@ -685,6 +685,21 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-subtle);
 }
 
+.cal-cell.exp-maint {
+  background-color: var(--amber-bg);
+  border-color: var(--amber-border);
+}
+
+.cal-cell.exp-repair {
+  background-color: var(--red-bg);
+  border-color: var(--red-border);
+}
+
+.cal-cell.exp-other {
+  background-color: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
 .cal-cell.today {
   outline: 2px solid var(--text);
   outline-offset: -2px;
